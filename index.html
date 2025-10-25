@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>🏦 MyBank</title>
+  <title>💰 MyBank</title>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -17,33 +17,44 @@
       margin: auto;
       padding: 20px;
       border-radius: 15px;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      box-shadow: 0 0 15px rgba(0,0,0,0.1);
+    }
+    img {
+      width: 60px;
+      margin-bottom: 10px;
+    }
+    h2 {
+      color: #333;
     }
     button {
       margin: 5px;
       padding: 10px 20px;
       border: none;
-      background: #007bff;
-      color: white;
-      border-radius: 8px;
+      border-radius: 5px;
       cursor: pointer;
+      background-color: #007bff;
+      color: white;
+      transition: 0.3s;
     }
     button:hover {
-      background: #0056b3;
+      background-color: #0056b3;
     }
-    img {
-      width: 100px;
-      border-radius: 50%;
-      margin-bottom: 10px;
+    p {
+      color: #333;
+    }
+    #history {
+      text-align: left;
+      font-size: 14px;
+      margin-top: 15px;
     }
   </style>
 </head>
 <body>
   <div class="card">
-    <img src="https://i.ibb.co/ZVh01dm/profile.png" alt="Profile">
+    <img src="https://www.svgrepo.com/show/331488/mongodb.svg" alt="mongoDB Logo">
     <h2>Account Holder: Isan</h2>
-    <p><strong>Bank Name:</strong> JS Bank</p>
-    <p><strong>Balance:</strong> <span id="balance">5000৳</span></p>
+    <p>Bank Name: JS Bank</p>
+    <p id="balance">Balance: 5000৳</p>
     <button onclick="deposit()">Deposit</button>
     <button onclick="withdraw()">Withdraw</button>
     <button onclick="send()">Send</button>
@@ -53,44 +64,47 @@
 
   <script>
     let balance = 5000;
-    const balanceElement = document.getElementById('balance');
-    const history = document.getElementById('history');
+    let history = [];
 
-    function updateHistory(amount, type) {
-      const p = document.createElement('p');
-      p.textContent = `${type} ${amount}৳`;
-      history.prepend(p);
+    function updateDisplay() {
+      document.getElementById("balance").innerText = `Balance: ${balance}৳`;
+      document.getElementById("history").innerHTML = history.map(h => `<p>${h}</p>`).join("");
     }
 
     function deposit() {
-      let amount = parseInt(prompt("Enter deposit amount:"));
+      let amount = prompt("Enter deposit amount:");
+      amount = parseInt(amount);
       if (!isNaN(amount) && amount > 0) {
         balance += amount;
-        balanceElement.textContent = balance + "৳";
-        updateHistory("+" + amount, "Deposit");
-      }
-    }
-
-    function withdraw() {
-      let amount = parseInt(prompt("Enter withdraw amount:"));
-      if (!isNaN(amount) && amount > 0 && amount <= balance) {
-        balance -= amount;
-        balanceElement.textContent = balance + "৳";
-        updateHistory("-" + amount, "Withdraw");
+        history.push(`Deposited: ${amount}৳`);
+        updateDisplay();
       } else {
         alert("Invalid amount!");
       }
     }
 
-    function send() {
-      let receiver = prompt("Send to (Name):");
-      let amount = parseInt(prompt("Enter amount to send:"));
+    function withdraw() {
+      let amount = prompt("Enter withdraw amount:");
+      amount = parseInt(amount);
       if (!isNaN(amount) && amount > 0 && amount <= balance) {
         balance -= amount;
-        balanceElement.textContent = balance + "৳";
-        updateHistory(`Sent ${amount}৳ to ${receiver}`, "");
+        history.push(`Withdrew: ${amount}৳`);
+        updateDisplay();
       } else {
-        alert("Invalid transaction!");
+        alert("Invalid or insufficient balance!");
+      }
+    }
+
+    function send() {
+      let amount = prompt("Enter send amount:");
+      amount = parseInt(amount);
+      if (!isNaN(amount) && amount > 0 && amount <= balance) {
+        let to = prompt("Enter receiver name:");
+        balance -= amount;
+        history.push(`Sent ${amount}৳ to ${to}`);
+        updateDisplay();
+      } else {
+        alert("Invalid or insufficient balance!");
       }
     }
   </script>
