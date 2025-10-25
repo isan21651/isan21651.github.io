@@ -1,0 +1,378 @@
+<!doctype html>
+<html lang="bn">
+<head>
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>MyBank Demo — Admin & Application System</title>
+<style>
+  body{font-family:Arial,Helvetica,sans-serif;background:#f3f8ff;margin:0;padding:18px;color:#123}
+  .wrap{max-width:1100px;margin:0 auto;display:flex;gap:18px;flex-wrap:wrap}
+  .panel{background:#fff;padding:16px;border-radius:10px;box-shadow:0 8px 22px rgba(10,20,40,.06)}
+  .left{flex:0 0 360px}
+  .right{flex:1;min-width:300px}
+  h2{margin:6px 0}
+  input,textarea,select,button{font-size:14px;padding:8px;border-radius:6px;border:1px solid #d7e9ff;box-sizing:border-box}
+  input,textarea,select{width:100%;margin:6px 0}
+  button{background:#0470d8;color:#fff;border:0;padding:10px 12px;cursor:pointer;border-radius:6px}
+  button.secondary{background:#6b7280}
+  table{width:100%;border-collapse:collapse;margin-top:10px}
+  th,td{padding:8px;border:1px solid #eef6ff;text-align:left;font-size:13px}
+  th{background:#0470d8;color:#fff}
+  .small{font-size:13px;color:#456}
+  .muted{color:#667;font-size:13px}
+  .row{display:flex;gap:8px}
+  .col{flex:1}
+  .hidden{display:none}
+  pre{white-space:pre-wrap;background:#f7fbff;padding:8px;border-radius:6px}
+  @media(max-width:880px){.wrap{flex-direction:column}.left{flex:auto}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- LEFT: Auth + Apply -->
+  <div class="panel left" id="left">
+    <h2>🔐 Admin Login</h2>
+    <div id="adminLoginBox">
+      <input id="adminEmail" placeholder="Admin Email (optional)">
+      <input id="adminPass" type="password" placeholder="Admin Password">
+      <div class="row"><button onclick="adminLogin()">Login</button><button class="secondary" onclick="showAdminSignup()">Signup Admin</button></div>
+      <p class="muted">Admin দিয়ে লগইন করে আপনি pending আবেদনগুলো approve/decline ও accounts manage করতে পারবেন.</p>
+    </div>
+
+    <div id="adminSignupBox" class="hidden">
+      <h3>Admin — Create Account</h3>
+      <input id="admName" placeholder="Admin Name">
+      <input id="admEmailNew" placeholder="Admin Email">
+      <input id="admPhoneNew" placeholder="Phone">
+      <input id="admPassNew" type="password" placeholder="Password">
+      <div class="row"><button onclick="adminCreate()">Create Admin</button><button class="secondary" onclick="showAdminLogin()">Back</button></div>
+    </div>
+
+    <hr>
+
+    <h2>📝 Apply for Bank Account</h2>
+    <div id="applyBox">
+      <input id="appName" placeholder="Full Name">
+      <input id="appGmail" placeholder="Gmail">
+      <input id="appPhone" placeholder="Phone">
+      <input id="appNID" placeholder="NID Number">
+      <textarea id="appAddress" placeholder="Address (optional)"></textarea>
+      <div class="row"><button onclick="applyAccount()">Submit Application</button><button class="secondary" onclick="clearApply()">Clear</button></div>
+      <p class="small muted">Application will be reviewed by admin. On approval user will get Account Number and serial.</p>
+    </div>
+
+    <hr>
+    <div class="small muted" id="stats"></div>
+  </div>
+
+  <!-- RIGHT: Admin dashboard / User dashboard -->
+  <div class="panel right" id="right">
+
+    <!-- landing -->
+    <div id="landing">
+      <h2>Welcome to MyBank Demo</h2>
+      <p class="muted">Apply for account or login once approved. Admin can create accounts from pending applications.</p>
+      <p class="small muted">Accounts start from <b>20032001</b>. Each user has Serial + Account Number + NID + Phone + Email + Balance + History (date-stamped).</p>
+    </div>
+
+    <!-- Admin Dashboard -->
+    <div id="adminPanel" class="hidden">
+      <h2>👑 Admin Panel</h2>
+      <div class="row" style="align-items:center">
+        <div class="col"><b id="admWelcome"></b><div class="muted small" id="admInfo"></div></div>
+        <div><button class="secondary" onclick="adminLogout()">Logout</button></div>
+      </div>
+
+      <h3 style="margin-top:12px">Pending Applications</h3>
+      <table>
+        <thead><tr><th>Apply#</th><th>Name</th><th>Email</th><th>Phone</th><th>NID</th><th>Actions</th></tr></thead>
+        <tbody id="applyTbody"></tbody>
+      </table>
+
+      <h3 style="margin-top:12px">Customers</h3>
+      <table>
+        <thead><tr><th>Serial</th><th>Account</th><th>Name</th><th>NID</th><th>Phone</th><th>Balance</th><th>Actions</th></tr></thead>
+        <tbody id="custTbody"></tbody>
+      </table>
+    </div>
+
+    <!-- Customer Dashboard -->
+    <div id="userPanel" class="hidden">
+      <h2>👤 <span id="uName"></span></h2>
+      <div class="muted small">Account#: <b id="uAccount"></b> — Serial: <span id="uSerial"></span></div>
+      <div class="muted small">NID: <span id="uNID"></span> • Phone: <span id="uPhone"></span> • Email: <span id="uEmail"></span></div>
+      <h3 id="uBalance">Balance: 0৳</h3>
+
+      <div class="row">
+        <div class="col"><button onclick="userDeposit()">Deposit</button></div>
+        <div class="col"><button onclick="userWithdraw()">Withdraw</button></div>
+        <div class="col"><button onclick="userSend()">Send Money</button></div>
+      </div>
+
+      <h4 style="margin-top:12px">Transaction History</h4>
+      <div id="uHistory"></div>
+      <div style="margin-top:12px"><button class="secondary" onclick="userLogout()">Logout</button></div>
+    </div>
+
+    <!-- Login for approved customers -->
+    <div id="userLogin" class="hidden">
+      <h3>Customer Login (Approved accounts)</h3>
+      <input id="loginEmail" placeholder="Email">
+      <input id="loginPass" type="password" placeholder="Password (Set by admin initially)">
+      <div class="row"><button onclick="customerLogin()">Login</button><button class="secondary" onclick="showLanding()">Back</button></div>
+      <p class="small muted">Note: Admin may set initial password or user sets at first login.</p>
+    </div>
+
+  </div>
+
+</div>
+
+<script>
+/* -----------------------
+ Data stored in localStorage:
+ - mb_apps : array of application objects {id, name, email, phone, nid, address, appliedAt}
+ - mb_users : array of user objects {serial, account, name, email, phone, nid, address, balance, password, history:[]}
+ - mb_admins : array of admin objects {name,email,phone,password}
+ - mb_lastAcc : number (last account number)
+ - mb_session : {role:'admin'|'user', id: email or account}
+------------------------*/
+
+// helper localStorage
+function load(k, d){ try{ const v=localStorage.getItem(k); return v?JSON.parse(v):d; }catch(e){return d;} }
+function save(k,v){ localStorage.setItem(k, JSON.stringify(v)); }
+
+// init
+let apps = load('mb_apps', []);
+let users = load('mb_users', []);
+let admins = load('mb_admins', []);
+let lastAcc = load('mb_lastAcc', 20032000); // will increment before assign
+let session = load('mb_session', null);
+
+save('mb_apps', apps); save('mb_users', users); save('mb_admins', admins); save('mb_lastAcc', lastAcc);
+
+// UI helpers
+function refreshStats(){ document.getElementById('stats').innerText = `Pending: ${apps.length} • Customers: ${users.length} • Admins: ${admins.length}`; }
+function showLanding(){ document.getElementById('landing').classList.remove('hidden'); document.getElementById('adminPanel').classList.add('hidden'); document.getElementById('userPanel').classList.add('hidden'); document.getElementById('userLogin').classList.add('hidden'); }
+function hideAllLeft(){ document.getElementById('adminLoginBox').classList.add('hidden'); document.getElementById('adminSignupBox').classList.add('hidden'); }
+function showAdminLogin(){ hideAllLeft(); document.getElementById('adminLoginBox').classList.remove('hidden'); }
+function showAdminSignup(){ hideAllLeft(); document.getElementById('adminSignupBox').classList.remove('hidden'); }
+
+// apply form
+function clearApply(){
+  document.getElementById('appName').value=''; document.getElementById('appGmail').value=''; document.getElementById('appPhone').value=''; document.getElementById('appNID').value=''; document.getElementById('appAddress').value='';
+}
+function applyAccount(){
+  const name = document.getElementById('appName').value.trim();
+  const email = document.getElementById('appGmail').value.trim().toLowerCase();
+  const phone = document.getElementById('appPhone').value.trim();
+  const nid = document.getElementById('appNID').value.trim();
+  const address = document.getElementById('appAddress').value.trim();
+  if(!name||!email||!phone||!nid) return alert('নাম, Gmail, ফোন ও NID অবশ্যই দিতে হবে');
+  // check existing user/email or pending
+  if(users.find(u=>u.email===email) || apps.find(a=>a.email===email)) return alert('এই ইমেইল দিয়ে আগে আবেদন/অ্যাকাউন্ট আছে');
+  const id = 'A'+(Date.now().toString().slice(-6));
+  const obj = { id, name, email, phone, nid, address, appliedAt: new Date().toLocaleString() };
+  apps.push(obj); save('mb_apps', apps);
+  alert('Application submitted! Admin will review.');
+  clearApply(); refreshStats();
+}
+
+/* ===== Admin functions ===== */
+function adminCreate(){
+  const name=document.getElementById('admName').value.trim();
+  const email=document.getElementById('admEmailNew').value.trim().toLowerCase();
+  const phone=document.getElementById('admPhoneNew').value.trim();
+  const pass=document.getElementById('admPassNew').value;
+  if(!name||!email||!phone||!pass) return alert('সব ফিল্ড পূরণ করুন');
+  if(admins.find(a=>a.email===email)) return alert('এই ইমেইল দিয়ে admin আছে');
+  admins.push({name,email,phone,pass});
+  save('mb_admins', admins);
+  alert('Admin created, now login');
+  document.getElementById('admName').value=''; document.getElementById('admEmailNew').value=''; document.getElementById('admPhoneNew').value=''; document.getElementById('admPassNew').value='';
+  showAdminLogin(); refreshStats();
+}
+
+function adminLogin(){
+  const email=document.getElementById('adminEmail').value.trim().toLowerCase();
+  const pass=document.getElementById('adminPass').value;
+  const a = admins.find(ad=>ad.email===email && ad.pass===pass);
+  if(!a) return alert('Admin credentials wrong. If none, create admin first.');
+  session = { role:'admin', id: a.email }; save('mb_session', session);
+  showAdminPanel();
+}
+
+function adminLogout(){ session=null; localStorage.removeItem('mb_session'); location.reload(); }
+
+function showAdminPanel(){
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('adminPanel').classList.remove('hidden');
+  document.getElementById('userPanel').classList.add('hidden');
+  document.getElementById('userLogin').classList.add('hidden');
+  const a = admins.find(ad=>ad.email===session.id);
+  document.getElementById('admWelcome').innerText = a? a.name : session.id;
+  document.getElementById('admInfo').innerText = a? `${a.email} • ${a.phone}` : '';
+  renderApplications(); renderCustomers(); refreshStats();
+}
+
+/* Applications render & actions */
+function renderApplications(){
+  const tbody = document.getElementById('applyTbody'); tbody.innerHTML='';
+  apps.forEach((app,i)=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${i+1}</td><td>${app.name}</td><td>${app.email}</td><td>${app.phone}</td><td>${app.nid}</td>
+      <td>
+        <button onclick="approveApp('${app.id}')">Approve</button>
+        <button class="secondary" onclick="rejectApp('${app.id}')">Reject</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* Approve application -> create user */
+function approveApp(appId){
+  const idx = apps.findIndex(a=>a.id===appId);
+  if(idx<0) return alert('Application not found');
+  const app = apps[idx];
+  // assign account
+  lastAcc = Number(load('mb_lastAcc', lastAcc)) + 1; save('mb_lastAcc', lastAcc);
+  const account = String(lastAcc);
+  const serial = users.length + 1;
+  // initial password: random 6-digit (admin can change later)
+  const initialPass = Math.random().toString(36).slice(-6);
+  const user = { serial, account, name:app.name, email:app.email, phone:app.phone, nid:app.nid, address:app.address, balance:0, password:initialPass, history:[`Account created on ${new Date().toLocaleString()} with initial password: ${initialPass}`] };
+  users.push(user);
+  // remove app
+  apps.splice(idx,1);
+  save('mb_users', users); save('mb_apps', apps);
+  alert(`Application approved.\nAccount#: ${account}\nInitial password: ${initialPass}\nTell the user to login using these credentials.`);
+  renderApplications(); renderCustomers(); refreshStats();
+}
+
+/* Reject app */
+function rejectApp(appId){
+  const idx = apps.findIndex(a=>a.id===appId);
+  if(idx<0) return alert('Application not found');
+  if(!confirm('Confirm reject this application?')) return;
+  apps.splice(idx,1); save('mb_apps', apps); renderApplications(); refreshStats();
+}
+
+/* Customers render */
+function renderCustomers(){
+  const tbody = document.getElementById('custTbody'); tbody.innerHTML='';
+  users.forEach(u=>{
+    const tr = document.createElement('tr');
+    tr.innerHTML = `<td>${u.serial}</td><td>${u.account}</td><td>${u.name}</td><td>${u.nid}</td><td>${u.phone}</td><td>${u.balance}৳</td>
+      <td>
+        <button onclick="adminEdit('${u.account}')">Edit Balance</button>
+        <button onclick="adminHistory('${u.account}')">History</button>
+        <button class="secondary" onclick="adminDelete('${u.account}')">Delete</button>
+      </td>`;
+    tbody.appendChild(tr);
+  });
+}
+
+/* Admin actions: edit balance, view history, delete */
+function adminEdit(account){
+  const u = users.find(x=>x.account===account);
+  if(!u) return alert('User not found');
+  const val = prompt(`Set new balance for ${u.name} (current ${u.balance}৳):`, u.balance);
+  const x = parseFloat(val);
+  if(isNaN(x)) return alert('Invalid');
+  u.history.push(`Balance set from ${u.balance}৳ to ${x}৳ by admin on ${new Date().toLocaleString()}`);
+  u.balance = x;
+  save('mb_users', users); renderCustomers();
+}
+function adminHistory(account){
+  const u = users.find(x=>x.account===account);
+  if(!u) return alert('User not found');
+  const w = window.open('', '_blank', 'width=700,height=600');
+  w.document.write(`<h3>History for ${u.name} (Acc# ${u.account})</h3><pre style="white-space:pre-wrap">${u.history.join('\n\n')}</pre>`);
+}
+function adminDelete(account){
+  if(!confirm('Confirm DELETE account?')) return;
+  const idx = users.findIndex(x=>x.account===account);
+  if(idx<0) return alert('Not found');
+  users.splice(idx,1);
+  users.forEach((uu,i)=> uu.serial = i+1); // reassign serials
+  save('mb_users', users); renderCustomers(); refreshStats();
+}
+
+/* ===== Customer login & dashboard ===== */
+function customerLogin(){
+  // login by email + password
+  const email = document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass = document.getElementById('loginPass').value;
+  const u = users.find(x=>x.email===email && x.password===pass);
+  if(!u) return alert('Credentials wrong or account not approved yet');
+  session = {role:'user', id:u.account}; save('mb_session', session);
+  showUserPanel();
+}
+function showUserPanel(){
+  document.getElementById('landing').classList.add('hidden');
+  document.getElementById('adminPanel').classList.add('hidden');
+  document.getElementById('userPanel').classList.remove('hidden');
+  document.getElementById('userLogin').classList.add('hidden');
+  const u = users.find(x=>x.account===session.id);
+  if(!u) return alert('User not found');
+  document.getElementById('uName').innerText = u.name;
+  document.getElementById('uAccount').innerText = u.account;
+  document.getElementById('uSerial').innerText = u.serial;
+  document.getElementById('uNID').innerText = u.nid;
+  document.getElementById('uPhone').innerText = u.phone;
+  document.getElementById('uEmail').innerText = u.email;
+  document.getElementById('uBalance').innerText = `Balance: ${u.balance}৳`;
+  document.getElementById('uHistory').innerHTML = u.history.slice().reverse().map(h=>`<pre>${h}</pre>`).join('');
+}
+
+/* Customer actions */
+function userDeposit(){
+  const amt = parseFloat(prompt('Enter deposit amount (৳):'));
+  if(isNaN(amt) || amt<=0) return alert('Invalid amount');
+  const u = users.find(x=>x.account===session.id);
+  u.balance += amt;
+  u.history.push(`+${amt}৳ Deposited on ${new Date().toLocaleString()}`);
+  save('mb_users', users); showUserPanel();
+}
+function userWithdraw(){
+  const amt = parseFloat(prompt('Enter withdraw amount (৳):'));
+  const u = users.find(x=>x.account===session.id);
+  if(isNaN(amt)||amt<=0) return alert('Invalid'); if(amt>u.balance) return alert('Insufficient');
+  u.balance -= amt;
+  u.history.push(`-${amt}৳ Withdrawn on ${new Date().toLocaleString()}`);
+  save('mb_users', users); showUserPanel();
+}
+function userSend(){
+  const toAcc = prompt('Recipient Account Number:');
+  const amt = parseFloat(prompt('Amount to send (৳):'));
+  if(!toAcc||isNaN(amt)||amt<=0) return alert('Invalid');
+  const u = users.find(x=>x.account===session.id);
+  const r = users.find(x=>x.account===toAcc.trim());
+  if(!r) return alert('Recipient not found');
+  if(amt>u.balance) return alert('Insufficient');
+  u.balance -= amt; r.balance += amt;
+  const now = new Date().toLocaleString();
+  u.history.push(`-${amt}৳ Sent to ${r.account} (${r.name}) on ${now}`);
+  r.history.push(`+${amt}৳ Received from ${u.account} (${u.name}) on ${now}`);
+  save('mb_users', users); showUserPanel();
+}
+
+function userLogout(){ session=null; localStorage.removeItem('mb_session'); location.reload(); }
+
+/* on load: show appropriate UI */
+function boot(){
+  apps = load('mb_apps', []); users = load('mb_users', []); admins = load('mb_admins', []); lastAcc = load('mb_lastAcc', lastAcc); session = load('mb_session', null);
+  refreshStats();
+  // if no admins exists, show admin signup box
+  if(admins.length===0){ showAdminSignup(); } else { showAdminLogin(); }
+  // route if session exists
+  if(session){
+    if(session.role==='admin') showAdminPanel();
+    else if(session.role==='user') showUserPanel();
+  }
+}
+boot();
+
+</script>
+</body>
+</html>
