@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>🏦 MyBank</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #eaf6ff;
+      text-align: center;
+      padding: 20px;
+    }
+    .card {
+      background: white;
+      max-width: 400px;
+      margin: auto;
+      padding: 20px;
+      border-radius: 15px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    button {
+      margin: 5px;
+      padding: 10px 20px;
+      border: none;
+      background: #007bff;
+      color: white;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    button:hover {
+      background: #0056b3;
+    }
+    img {
+      width: 100px;
+      border-radius: 50%;
+      margin-bottom: 10px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <img src="https://i.ibb.co/ZVh01dm/profile.png" alt="Profile">
+    <h2>Account Holder: Isan</h2>
+    <p><strong>Bank Name:</strong> JS Bank</p>
+    <p><strong>Balance:</strong> <span id="balance">5000৳</span></p>
+    <button onclick="deposit()">Deposit</button>
+    <button onclick="withdraw()">Withdraw</button>
+    <button onclick="send()">Send</button>
+    <h3>Transaction History:</h3>
+    <div id="history"></div>
+  </div>
+
+  <script>
+    let balance = 5000;
+    const balanceElement = document.getElementById('balance');
+    const history = document.getElementById('history');
+
+    function updateHistory(amount, type) {
+      const p = document.createElement('p');
+      p.textContent = `${type} ${amount}৳`;
+      history.prepend(p);
+    }
+
+    function deposit() {
+      let amount = parseInt(prompt("Enter deposit amount:"));
+      if (!isNaN(amount) && amount > 0) {
+        balance += amount;
+        balanceElement.textContent = balance + "৳";
+        updateHistory("+" + amount, "Deposit");
+      }
+    }
+
+    function withdraw() {
+      let amount = parseInt(prompt("Enter withdraw amount:"));
+      if (!isNaN(amount) && amount > 0 && amount <= balance) {
+        balance -= amount;
+        balanceElement.textContent = balance + "৳";
+        updateHistory("-" + amount, "Withdraw");
+      } else {
+        alert("Invalid amount!");
+      }
+    }
+
+    function send() {
+      let receiver = prompt("Send to (Name):");
+      let amount = parseInt(prompt("Enter amount to send:"));
+      if (!isNaN(amount) && amount > 0 && amount <= balance) {
+        balance -= amount;
+        balanceElement.textContent = balance + "৳";
+        updateHistory(`Sent ${amount}৳ to ${receiver}`, "");
+      } else {
+        alert("Invalid transaction!");
+      }
+    }
+  </script>
+</body>
+</html>
