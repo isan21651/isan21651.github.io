@@ -1,0 +1,379 @@
+/*
+FastTopUp - Single-file React app (App.jsx)
+Usage:
+1. Create a new React app (Vite recommended):
+   npm create vite@latest fasttopup --template react
+   cd fasttopup
+   npm install
+
+2. Install Tailwind (optional but recommended). If you don't want Tailwind, keep the classes or adjust.
+   Follow Tailwind setup for Create React App / Vite.
+
+3. Replace src/App.jsx with the contents of this file, and ensure src/main.jsx imports './index.css' etc.
+
+This single-file app includes:
+- Home page with Free Fire top-up packs
+- Auth (register/login) using localStorage
+- Cart & Checkout flow with mock payments (bKash, Nagad, Rocket, Upay)
+- Profile & order history stored in localStorage
+
+Note: This is a front-end prototype. For real payments & top-up, integrate with real APIs on a secure backend.
+*/
+
+import React, { useEffect, useState } from 'react';
+
+// Mock data: Free Fire packs
+const PACKS = [
+  { id: 'ff-1', name: '60 UC', price: 60 },
+  { id: 'ff-2', name: '180 UC', price: 170 },
+  { id: 'ff-3', name: '300 UC', price: 280 },
+  { id: 'ff-4', name: '720 UC', price: 650 },
+];
+
+const PAYMENT_METHODS = [
+  { id: 'bkash', label: 'bKash' },
+  { id: 'nagad', label: 'Nagad' },
+  { id: 'rocket', label: 'Rocket' },
+  { id: 'upay', label: 'Upay' },
+  { id: 'card', label: 'Card (Mock)' },
+];
+
+function saveUsers(users) { localStorage.setItem('ft_users', JSON.stringify(users)); }
+function loadUsers() { return JSON.parse(localStorage.getItem('ft_users') || '[]'); }
+
+function saveOrders(orders) { localStorage.setItem('ft_orders', JSON.stringify(orders)); }
+function loadOrders() { return JSON.parse(localStorage.getItem('ft_orders') || '[]'); }
+
+function App() {
+  const [route, setRoute] = useState('home');
+  const [user, setUser] = useState(null);
+  const [cart, setCart] = useState([]);
+
+  useEffect(() => {
+    const session = JSON.parse(localStorage.getItem('ft_session') || 'null');
+    if (session) setUser(session);
+  }, []);
+
+  function login(userObj) {
+    localStorage.setItem('ft_session', JSON.stringify(userObj));
+    setUser(userObj);
+    setRoute('home');
+  }
+  function logout() {
+    localStorage.removeItem('ft_session');
+    setUser(null);
+    setRoute('home');
+  }
+
+  function addToCart(pack) {
+    setCart(prev => [...prev, pack]);
+    setRoute('cart');
+  }
+
+  function removeFromCart(index) {
+    setCart(prev => prev.filter((_, i) => i !== index));
+  }
+
+  function clearCart() { setCart([]); }
+
+  return (
+    <div className="min-h-screen bg-gray-50">
+      <Header onNavigate={setRoute} route={route} user={user} onLogout={logout} cartCount={cart.length} />
+      <main className="max-w-5xl mx-auto p-4">
+        {route === 'home' && <Home onAdd={addToCart} />}
+        {route === 'login' && <Auth onLogin={login} onNavigate={setRoute} />}
+        {route === 'cart' && <Cart cart={cart} onRemove={removeFromCart} onCheckout={() => setRoute('checkout')} onBack={() => setRoute('home')} />}
+        {route === 'checkout' && <Checkout cart={cart} user={user} onPaymentSuccess={(order)=>{ saveOrders([...loadOrders(), order]); clearCart(); setRoute('profile'); }} onRequireLogin={()=>setRoute('login')} />}
+        {route === 'profile' && <Profile user={user} onLogin={login} />}
+      </main>
+
+      <footer className="text-center p-4 text-sm text-gray-600">
+        © {new Date().getFullYear()} FastTopUp — Prototype. For demo only.
+      </footer>
+    </div>
+  );
+}
+
+function Header({ onNavigate, route, user, onLogout, cartCount }) {
+  return (
+    <header className="bg-white shadow-sm">
+      <div className="max-w-5xl mx-auto flex items-center justify-between p-4">
+        <div className="flex items-center gap-3 cursor-pointer" onClick={()=>onNavigate('home')}>
+          <div className="w-10 h-10 bg-gradient-to-br from-indigo-500 to-pink-500 rounded-md flex items-center justify-center text-white font-bold">FT</div>
+          <div>
+            <div className="font-bold">FastTopUp</div>
+            <div className="text-xs text-gray-500">Free Fire | Top-up service</div>
+          </div>
+        </div>
+
+        <nav className="flex items-center gap-4">
+          <button className={`py-2 px-3 ${route==='home'?'bg-indigo-50 rounded':'hover:bg-gray-100 rounded'} text-sm`} onClick={()=>onNavigate('home')}>Home</button>
+          <button className={`py-2 px-3 ${route==='profile'?'bg-indigo-50 rounded':'hover:bg-gray-100 rounded'} text-sm`} onClick={()=>onNavigate('profile')}>Profile</button>
+          <button className="py-2 px-3 hover:bg-gray-100 rounded text-sm" onClick={()=>onNavigate('cart')}>Cart ({cartCount})</button>
+          {!user ? (
+            <button className="py-2 px-3 bg-indigo-600 text-white rounded" onClick={()=>onNavigate('login')}>Login / Register</button>
+          ) : (
+            <div className="flex items-center gap-2">
+              <div className="text-sm">{user.name}</div>
+              <button className="py-1 px-2 bg-red-500 text-white rounded text-sm" onClick={onLogout}>Logout</button>
+            </div>
+          )}
+        </nav>
+      </div>
+    </header>
+  );
+}
+
+function Home({ onAdd }) {
+  return (
+    <div>
+      <Hero />
+      <section className="mt-6">
+        <h2 className="text-xl font-semibold">Free Fire Top-up Packs</h2>
+        <p className="text-sm text-gray-500">Choose a pack and proceed to checkout</p>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mt-4">
+          {PACKS.map(pack => (
+            <div key={pack.id} className="bg-white p-4 rounded shadow-sm">
+              <div className="font-bold text-lg">{pack.name}</div>
+              <div className="text-gray-600 mt-1">Price: ৳{pack.price}</div>
+              <div className="mt-4 flex gap-2">
+                <button className="flex-1 py-2 bg-indigo-600 text-white rounded" onClick={()=>onAdd(pack)}>Add to Cart</button>
+                <button className="py-2 px-3 border rounded" onClick={()=>alert('Pack details:\n' + pack.name + ' — ৳' + pack.price)}>Details</button>
+              </div>
+            </div>
+          ))}
+        </div>
+      </section>
+
+      <section className="mt-8 bg-white p-4 rounded shadow-sm">
+        <h3 className="font-semibold">Why FastTopUp?</h3>
+        <ul className="list-disc ml-6 text-sm text-gray-600 mt-2">
+          <li>Instant top-up (mock in this prototype)</li>
+          <li>Multiple payment methods: bKash, Nagad, Rocket, Upay</li>
+          <li>Secure accounts & order history</li>
+        </ul>
+      </section>
+    </div>
+  );
+}
+
+function Hero() {
+  return (
+    <div className="bg-gradient-to-r from-indigo-500 to-pink-500 text-white rounded p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+      <div>
+        <h1 className="text-2xl font-bold">FastTopUp — Game Top-up সহজে ও দ্রুত</h1>
+        <p className="mt-2 text-sm">Free Fire UC, Packs, এবং দ্রুত পেমেন্ট অপশন। এইটা প্রোটোটাইপ—রিয়েল সার্ভিসের জন্য ব্যাকএন্ড দরকার।</p>
+      </div>
+      <div className="p-4 bg-white bg-opacity-10 rounded">
+        <div className="text-sm">Popular:</div>
+        <div className="font-bold text-xl">Free Fire — 300 UC</div>
+      </div>
+    </div>
+  );
+}
+
+function Auth({ onLogin, onNavigate }) {
+  const [isRegister, setIsRegister] = useState(false);
+  const [name, setName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [password, setPassword] = useState('');
+
+  function handleRegister(e) {
+    e.preventDefault();
+    const users = loadUsers();
+    if (users.find(u=>u.phone === phone)) return alert('Phone already registered');
+    const newUser = { id: Date.now(), name, phone, password };
+    users.push(newUser); saveUsers(users);
+    onLogin({ id: newUser.id, name: newUser.name, phone: newUser.phone });
+  }
+
+  function handleLogin(e) {
+    e.preventDefault();
+    const users = loadUsers();
+    const found = users.find(u=>u.phone===phone && u.password===password);
+    if (!found) return alert('Invalid credentials. Try registering first.');
+    onLogin({ id: found.id, name: found.name, phone: found.phone });
+  }
+
+  return (
+    <div className="max-w-md mx-auto bg-white p-6 rounded shadow-sm">
+      <h2 className="text-lg font-semibold">{isRegister ? 'Register' : 'Login'}</h2>
+      <form onSubmit={isRegister ? handleRegister : handleLogin} className="mt-4 flex flex-col gap-3">
+        {isRegister && <input placeholder="Name" className="border p-2 rounded" value={name} onChange={e=>setName(e.target.value)} required />}
+        <input placeholder="Phone (e.g. 01XXXXXXXXX)" className="border p-2 rounded" value={phone} onChange={e=>setPhone(e.target.value)} required />
+        <input type="password" placeholder="Password" className="border p-2 rounded" value={password} onChange={e=>setPassword(e.target.value)} required />
+        <div className="flex gap-2">
+          <button className="flex-1 py-2 bg-indigo-600 text-white rounded" type="submit">{isRegister ? 'Create account' : 'Login'}</button>
+          <button type="button" className="py-2 px-3 border rounded" onClick={()=>setIsRegister(!isRegister)}>{isRegister ? 'Have account?' : 'Register'}</button>
+        </div>
+      </form>
+      <div className="text-sm text-gray-500 mt-3">Demo: accounts are stored in your browser localStorage.</div>
+      <div className="mt-4 text-center">
+        <button className="text-sm text-indigo-600" onClick={()=>onNavigate('home')}>Back to home</button>
+      </div>
+    </div>
+  );
+}
+
+function Cart({ cart, onRemove, onCheckout, onBack }) {
+  const total = cart.reduce((s,p)=>s+p.price,0);
+  return (
+    <div>
+      <h2 className="text-xl font-semibold">Cart</h2>
+      {cart.length===0 ? (
+        <div className="mt-4 p-4 bg-white rounded shadow-sm text-center">
+          Cart is empty. <button className="text-indigo-600" onClick={onBack}>Go add packs</button>
+        </div>
+      ) : (
+        <div className="mt-4 bg-white p-4 rounded shadow-sm">
+          <ul className="divide-y">
+            {cart.map((item,i)=> (
+              <li key={i} className="py-3 flex items-center justify-between">
+                <div>
+                  <div className="font-medium">{item.name}</div>
+                  <div className="text-sm text-gray-500">৳{item.price}</div>
+                </div>
+                <div className="flex items-center gap-2">
+                  <button className="py-1 px-2 border rounded text-sm" onClick={()=>onRemove(i)}>Remove</button>
+                </div>
+              </li>
+            ))}
+          </ul>
+
+          <div className="mt-4 flex items-center justify-between">
+            <div className="text-lg font-semibold">Total: ৳{total}</div>
+            <div>
+              <button className="py-2 px-3 mr-2 border rounded" onClick={onBack}>Continue shopping</button>
+              <button className="py-2 px-3 bg-indigo-600 text-white rounded" onClick={onCheckout}>Checkout</button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function Checkout({ cart, user, onPaymentSuccess, onRequireLogin }) {
+  const [selectedMethod, setSelectedMethod] = useState(PAYMENT_METHODS[0].id);
+  const [account, setAccount] = useState(''); // phone/account for bkash
+  const total = cart.reduce((s,p)=>s+p.price,0);
+
+  useEffect(()=>{ if (!user) { /* show a note */ } }, [user]);
+
+  function handlePay() {
+    if (!user) return onRequireLogin();
+    if (!account) return alert('Enter payment account/phone number');
+
+    // Create a mock order
+    const order = {
+      id: 'ORD-' + Date.now(),
+      userId: user.id,
+      items: cart,
+      total,
+      method: selectedMethod,
+      account,
+      status: 'processing',
+      createdAt: new Date().toISOString(),
+    };
+
+    // Simulate payment processing delay
+    setTimeout(()=>{
+      order.status = 'success';
+      const orders = loadOrders(); orders.push(order); saveOrders(orders);
+      alert('Payment successful! Order ID: ' + order.id + '\n(এটা একটি মোকের সাকসেস মেসেজ)');
+      onPaymentSuccess(order);
+    }, 900);
+  }
+
+  return (
+    <div className="max-w-2xl mx-auto bg-white p-6 rounded shadow-sm">
+      <h2 className="text-lg font-semibold">Checkout</h2>
+      {!user && <div className="mt-3 bg-yellow-50 p-3 rounded text-sm">Login করুন পরবর্তী ধাপে যেতে — <button className="text-indigo-600" onClick={onRequireLogin}>Login now</button></div>}
+
+      <div className="mt-4">
+        <div className="text-sm text-gray-500">Items</div>
+        <ul className="mt-2">
+          {cart.map((c,i)=>(<li key={i} className="py-1">{c.name} — ৳{c.price}</li>))}
+        </ul>
+        <div className="mt-3 font-semibold">Total: ৳{total}</div>
+      </div>
+
+      <div className="mt-4">
+        <div className="text-sm text-gray-500">Payment method</div>
+        <div className="flex flex-wrap gap-2 mt-2">
+          {PAYMENT_METHODS.map(m=> (
+            <label key={m.id} className={`border p-2 rounded cursor-pointer ${selectedMethod===m.id? 'ring-2 ring-indigo-400':''}`}>
+              <input type="radio" name="pm" className="mr-2" checked={selectedMethod===m.id} onChange={()=>setSelectedMethod(m.id)} /> {m.label}
+            </label>
+          ))}
+        </div>
+
+        <div className="mt-3">
+          <input placeholder="Payment account / phone (e.g. 01XXXXXXXXX)" value={account} onChange={e=>setAccount(e.target.value)} className="w-full p-2 border rounded" />
+        </div>
+
+        <div className="mt-4 flex gap-2">
+          <button className="py-2 px-3 border rounded" onClick={()=>window.history.back()}>Back</button>
+          <button className="py-2 px-3 bg-green-600 text-white rounded" onClick={handlePay}>Pay ৳{total}</button>
+        </div>
+      </div>
+
+      <div className="mt-4 text-xs text-gray-500">Demo note: This page simulates payment. Integrate real payment gateways on backend for production.</div>
+    </div>
+  );
+}
+
+function Profile({ user, onLogin }) {
+  const [orders, setOrders] = useState([]);
+
+  useEffect(()=>{
+    setOrders(loadOrders().filter(o=> user ? o.userId === user.id : false));
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="max-w-md mx-auto bg-white p-6 rounded shadow-sm text-center">
+        <div className="text-lg font-semibold">Profile</div>
+        <div className="mt-3">Login করে তোমার অর্ডারগুলো দেখতে পারবে।</div>
+        <div className="mt-4">
+          <button className="py-2 px-3 bg-indigo-600 text-white rounded" onClick={()=>onLogin({id:0,name:'Guest',phone:''})}>Quick demo login</button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="max-w-3xl mx-auto">
+      <div className="bg-white p-4 rounded shadow-sm">
+        <h2 className="text-lg font-semibold">{user.name}</h2>
+        <div className="text-sm text-gray-500">Phone: {user.phone}</div>
+      </div>
+
+      <div className="mt-4 bg-white p-4 rounded shadow-sm">
+        <h3 className="font-semibold">Order history</h3>
+        {orders.length===0 ? <div className="mt-2 text-sm text-gray-500">No orders yet.</div> : (
+          <ul className="mt-2 divide-y">
+            {orders.map(o=> (
+              <li key={o.id} className="py-3">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <div className="font-medium">Order {o.id}</div>
+                    <div className="text-sm text-gray-500">{new Date(o.createdAt).toLocaleString()}</div>
+                    <div className="text-sm mt-1">Method: {o.method} — Account: {o.account}</div>
+                  </div>
+                  <div className="text-right">
+                    <div className="font-semibold">৳{o.total}</div>
+                    <div className={`text-sm ${o.status==='success' ? 'text-green-600' : 'text-yellow-600'}`}>{o.status}</div>
+                  </div>
+                </div>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+    </div>
+  );
+}
+
+export default App;
