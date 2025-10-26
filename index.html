@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>🏦 MyBank System</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: linear-gradient(135deg, #0a2540, #2a6dd1);
+      height: 100vh;
+      margin: 0;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+
+    .card {
+      background: rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      border-radius: 20px;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      padding: 30px;
+      width: 350px;
+      color: white;
+      text-align: center;
+      transition: 0.4s;
+    }
+
+    input, button {
+      width: 85%;
+      padding: 10px;
+      margin: 8px;
+      border: none;
+      border-radius: 8px;
+      font-size: 15px;
+    }
+
+    input {
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      outline: none;
+    }
+
+    input::placeholder {
+      color: #e0e0e0;
+    }
+
+    button {
+      background: linear-gradient(135deg, #0066ff, #00ccff);
+      color: white;
+      cursor: pointer;
+      font-weight: bold;
+      transition: 0.3s;
+    }
+
+    button:hover {
+      background: linear-gradient(135deg, #0044cc, #0099cc);
+    }
+
+    h2 {
+      margin-bottom: 15px;
+    }
+
+    a {
+      color: #aeeaff;
+      cursor: pointer;
+    }
+
+    table {
+      width: 100%;
+      color: white;
+      border-collapse: collapse;
+      margin-top: 15px;
+      font-size: 14px;
+    }
+
+    th, td {
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 6px;
+    }
+
+    th {
+      background: rgba(255, 255, 255, 0.25);
+    }
+  </style>
+</head>
+<body>
+  <!-- Login Page -->
+  <div id="loginPage" class="card">
+    <h2>🔐 লগইন</h2>
+    <input id="email" type="text" placeholder="ইমেইল দিন"><br>
+    <input id="password" type="password" placeholder="পাসওয়ার্ড দিন"><br>
+    <button onclick="login()">Login</button>
+    <p>অ্যাকাউন্ট নেই? <a onclick="showRegister()">রেজিস্টার করুন</a></p>
+  </div>
+
+  <!-- Register Page -->
+  <div id="registerPage" class="card" style="display:none;">
+    <h2>📝 নতুন অ্যাকাউন্ট</h2>
+    <input id="name" type="text" placeholder="নাম"><br>
+    <input id="nid" type="text" placeholder="NID নম্বর"><br>
+    <input id="phone" type="text" placeholder="ফোন নম্বর"><br>
+    <input id="emailReg" type="text" placeholder="ইমেইল"><br>
+    <input id="passwordReg" type="password" placeholder="পাসওয়ার্ড"><br>
+    <button onclick="register()">রেজিস্টার</button>
+    <p><a onclick="showLogin()">লগইনে ফিরে যান</a></p>
+  </div>
+
+  <!-- Admin Panel -->
+  <div id="adminPanel" class="card" style="display:none; width:600px;">
+    <h2>👑 অ্যাডমিন প্যানেল</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>সিরিয়াল</th>
+          <th>অ্যাকাউন্ট</th>
+          <th>নাম</th>
+          <th>ব্যালেন্স</th>
+          <th>ডিপোজিট</th>
+          <th>উইথড্র</th>
+        </tr>
+      </thead>
+      <tbody id="userTable"></tbody>
+    </table>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <!-- User Panel -->
+  <div id="userPanel" class="card" style="display:none;">
+    <h2>👤 স্বাগতম <span id="userName"></span></h2>
+    <p id="userAccount"></p>
+    <p id="userBalance"></p>
+    <button onclick="deposit()">Deposit</button>
+    <button onclick="withdraw()">Withdraw</button>
+    <button onclick="logout()">Logout</button>
+  </div>
+
+  <script>
+    let users = JSON.parse(localStorage.getItem("users")) || [];
+    let currentUser = null;
+    let baseAccount = 20032001;
+    let admins = [
+      { email: "admin@bank.com", password: "1234" },
+      { email: "manager@bank.com", password: "admin" }
+    ];
+
+    function showRegister() {
+      document.getElementById("loginPage").style.display = "none";
+      document.getElementById("registerPage").style.display = "block";
+    }
+
+    function showLogin() {
+      document.getElementById("registerPage").style.display = "none";
+      document.getElementById("loginPage").style.display = "block";
+    }
+
+    function register() {
+      let name = document.getElementById("name").value;
+      let nid = document.getElementById("nid").value;
+      let phone = document.getElementById("phone").value;
+      let email = document.getElementById("emailReg").value;
+      let password = document.getElementById("passwordReg").value;
+
+      if (!name || !nid || !phone || !email || !password) {
+        alert("সব ঘর পূরণ করুন!");
+        return;
+      }
+
+      let accountNo = baseAccount + users.length;
+      users.push({ name, nid, phone, email, password, balance: 0, accountNo, depositDate: "", withdrawDate: "" });
+      localStorage.setItem("users", JSON.stringify(users));
+      alert("অ্যাকাউন্ট তৈরি হয়েছে!");
+      showLogin();
+    }
+
+    function login() {
+      let email = document.getElementById("email").value;
+      let password = document.getElementById("password").value;
+
+      let admin = admins.find(a => a.email === email && a.password === password);
+      if (admin) {
+        showAdminPanel();
+        return;
+      }
+
+      let user = users.find(u => u.email === email && u.password === password);
+      if (user) {
+        currentUser = user;
+        showUserPanel();
+      } else {
+        alert("ভুল ইমেইল বা পাসওয়ার্ড!");
+      }
+    }
+
+    function showAdminPanel() {
+      document.getElementById("loginPage").style.display = "none";
+      document.getElementById("adminPanel").style.display = "block";
+      let table = document.getElementById("userTable");
+      table.innerHTML = "";
+      users.forEach((u, i) => {
+        table.innerHTML += `<tr>
+          <td>${i + 1}</td>
+          <td>${u.accountNo}</td>
+          <td>${u.name}</td>
+          <td>${u.balance}৳</td>
+          <td>${u.depositDate || "-"}</td>
+          <td>${u.withdrawDate || "-"}</td>
+        </tr>`;
+      });
+    }
+
+    function showUserPanel() {
+      document.getElementById("loginPage").style.display = "none";
+      document.getElementById("userPanel").style.display = "block";
+      document.getElementById("userName").innerText = currentUser.name;
+      document.getElementById("userAccount").innerText = "Account No: " + currentUser.accountNo;
+      document.getElementById("userBalance").innerText = "Balance: " + currentUser.balance + "৳";
+    }
+
+    function deposit() {
+      let amount = parseInt(prompt("ডিপোজিট এমাউন্ট দিন:"));
+      if (amount > 0) {
+        currentUser.balance += amount;
+        currentUser.depositDate = new Date().toLocaleString();
+        saveUsers();
+        showUserPanel();
+      }
+    }
+
+    function withdraw() {
+      let amount = parseInt(prompt("উইথড্র এমাউন্ট দিন:"));
+      if (amount > 0 && amount <= currentUser.balance) {
+        currentUser.balance -= amount;
+        currentUser.withdrawDate = new Date().toLocaleString();
+        saveUsers();
+        showUserPanel();
+      } else {
+        alert("ব্যালেন্স পর্যাপ্ত নয়!");
+      }
+    }
+
+    function saveUsers() {
+      localStorage.setItem("users", JSON.stringify(users));
+    }
+
+    function logout() {
+      currentUser = null;
+      document.getElementById("adminPanel").style.display = "none";
+      document.getElementById("userPanel").style.display = "none";
+      document.getElementById("loginPage").style.display = "block";
+    }
+  </script>
+</body>
+</html>
